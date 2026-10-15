@@ -1,0 +1,5 @@
+{
+  "errno": 0,
+  "msg": "success",
+  "result": { "today": 12.7, "month": 241.3, "cumulative": 8123.5 }
+}

@@ -1,67 +1,196 @@
-# Template de démonstration
+# FoxESS
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Les onduleurs et batteries FoxESS (séries H1, H3, KH, AIO, T et F…) dans Gladys, par l'**Open API
+officielle du FoxESS Cloud** : production solaire, consommation de la maison, soutirage et
+injection réseau, charge de la batterie, état et défauts de l'onduleur, sur votre tableau de bord et
+dans vos scènes.
+
+Cette intégration a été développée sans le matériel, à partir de la documentation de l'Open API et
+des projets open source qui l'utilisent : vos retours sont les bienvenus. Elle n'est pas affiliée à
+FoxESS.
 
 ## Ce que vous obtenez
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+- **Un appareil par onduleur** de votre compte FoxESS Cloud, lu toutes les 5 minutes par défaut.
+- Les **flux d'énergie** : production solaire (totale et par chaîne PV), consommation de la maison,
+  soutirage et injection réseau, charge et décharge de la batterie.
+- Les **compteurs** : production du jour, production cumulée (l'index que lit le suivi d'énergie
+  de Gladys), index de soutirage et d'injection, index de charge et de décharge de la batterie.
+- La **batterie** : niveau de charge et température.
+- L'**onduleur** : état (raccordé au réseau, hors réseau, défaut…), alarme en cours, en ligne ou
+  non, température.
+- Un **widget de tableau de bord** avec les flux d'un onduleur, sa batterie et son mode de travail.
+- Un **déclencheur de scène** quand l'onduleur signale un nouveau défaut.
+- Un **pilotage** facultatif (désactivé par défaut) : mode de travail et charge minimale de la
+  batterie, depuis les scènes et le widget.
+
+## Prérequis
+
+- Gladys Assistant **5.1.0** ou plus récent.
+- Un compte **FoxESS Cloud** (foxesscloud.com) où votre onduleur apparaît : le même compte que
+  l'application FoxESS.
+- Une **clé d'API** de ce compte : sur foxesscloud.com, ouvrez votre profil (en haut à droite),
+  **User Profile**, **API Management**, puis **Generate API key**. Copiez la longue clé affichée.
+- Le serveur Gladys a besoin d'internet et d'une horloge à l'heure (les requêtes sont signées avec
+  l'heure : une horloge décalée de plus d'une minute est refusée).
 
 ## Configuration
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Installez l'intégration (**Intégrations → Installer depuis GitHub**, ou depuis le store), puis
+remplissez sa configuration :
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+| Champ                               | Que mettre                                                                                                                                                       |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clé d'API                           | La clé générée dans API Management.                                                                                                                              |
+| Numéros de série des onduleurs      | Vide pour afficher tous les onduleurs du compte, sinon les numéros de série à garder, séparés par des virgules (FoxESS Cloud, **Device**, **Inverter**).         |
+| Intervalle de rafraîchissement      | De 5 minutes (par défaut) à 1 heure. Le FoxESS Cloud met ses valeurs à jour environ toutes les 5 minutes : lire plus vite ne ferait que consommer le quota.      |
+| Nombre de chaînes PV                | 0 (par défaut) : une fonctionnalité par chaîne que l'onduleur rapporte. Certains modèles rapportent 4 ou 6 chaînes pour 2 câblées : mettez 2 pour garder 1 et 2. |
+| Langue des noms de fonctionnalités  | La langue des noms de fonctionnalités quand un onduleur est ajouté (Gladys les garde ensuite), et des textes d'état.                                             |
+| Autoriser le pilotage de l'onduleur | Désactivé par défaut. Voir [Actions de scène](#actions-de-scène).                                                                                                |
 
-## Actions
+**Tester la connexion** liste les onduleurs du compte et, quand le cloud le donne, le nombre
+d'appels d'API restants aujourd'hui. Ouvrez ensuite l'onglet **Découverte** et ajoutez vos
+onduleurs.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+## L'appareil onduleur
 
-## Scènes
+| Fonctionnalité             | Type dans Gladys                  | Unité | Remarques                                                    |
+| -------------------------- | --------------------------------- | ----- | ------------------------------------------------------------ |
+| Production solaire         | Puissance de production           | W     | Toutes les chaînes PV ensemble.                              |
+| Chaîne PV                  | Puissance de production           | W     | Une par chaîne : « Chaîne PV 1 », « Chaîne PV 2 »…           |
+| Production du jour         | Production journalière            | kWh   | Revient à 0 à minuit (heure de l'installation).              |
+| Production cumulée         | Index de production               | kWh   | Compteur à vie, pour le suivi d'énergie.                     |
+| Consommation de la maison  | Puissance                         | W     | Ce que la maison tire, quelle que soit la source.            |
+| Soutirage réseau           | Puissance importée du réseau      | W     |                                                              |
+| Injection réseau           | Puissance exportée vers le réseau | W     |                                                              |
+| Index de soutirage         | Index import réseau électrique    | kWh   | Compteur à vie du compteur réseau de l'onduleur.             |
+| Index d'injection          | Index export réseau électrique    | kWh   |                                                              |
+| Niveau de batterie         | Niveau de batterie                | %     | Onduleurs avec batterie seulement, comme les cinq suivantes. |
+| Charge de la batterie      | Puissance de charge               | W     |                                                              |
+| Décharge de la batterie    | Puissance de décharge             | W     |                                                              |
+| Index de charge batterie   | Index de charge                   | kWh   |                                                              |
+| Index de décharge batterie | Index de décharge                 | kWh   |                                                              |
+| Température de la batterie | Température                       | °C    |                                                              |
+| Température de l'onduleur  | Température                       | °C    |                                                              |
+| État de l'onduleur         | Texte                             |       | En ligne, Raccordé au réseau, Hors réseau (secours), Défaut… |
+| Alarme de l'onduleur       | Texte                             |       | Le défaut que FoxESS signale, « Aucune » sinon.              |
+| En ligne                   | Etat de l'entrée                  |       | 1 quand l'onduleur communique avec le FoxESS Cloud.          |
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+Un onduleur que le FoxESS Cloud donne **hors ligne** (la nuit pour un onduleur sans batterie, ou
+quand son dongle Wi-Fi est coupé) ne met à jour que son état et « En ligne » : le cloud servirait
+sinon ses dernières valeurs comme si elles étaient actuelles.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+La production cumulée est un **index de production** pour le suivi d'énergie de Gladys ; son
+historique est conservé. Que Gladys en tire une production par 30 minutes dépend de votre version :
+la 5.2.1 ne le fait automatiquement que pour les index de consommation.
 
-## Tableau de bord
+## Widget du tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+**Solaire FoxESS** affiche, pour l'onduleur choisi dans ses réglages (le premier ajouté si aucun
+n'est choisi) :
+
+- des tuiles pour la production solaire, la consommation de la maison, le niveau de batterie, le
+  soutirage et l'injection, la production du jour — en direct, elles suivent les états ;
+- l'état de l'onduleur, son alarme en cours, ce que fait la batterie (en charge, en décharge, au
+  repos), sa charge minimale, le mode de travail et l'heure de la dernière lecture ;
+- avec le pilotage autorisé et une batterie : trois boutons **Autoconsommation**, **Injection
+  prioritaire** et **Secours**, chacun demandant une confirmation. Le mode en cours porte une coche.
+  Avec les boutons, la place se réduit à quatre tuiles : l'injection et la production du jour
+  passent en lignes d'état.
+
+## Déclencheur de scène
+
+**Défaut de l'onduleur** se déclenche quand l'onduleur signale un défaut absent de la lecture
+précédente (un nouveau défaut, ou un autre qui le remplace). Filtrez sur un onduleur, ou laissez
+vide pour tous. La variable **Défaut** contient la description donnée par FoxESS (par exemple
+« Grid Lost Fault »). Un défaut déjà présent au démarrage de l'intégration ne le déclenche pas, ni
+un défaut qui disparaît : la fonctionnalité « Alarme de l'onduleur » revient alors à « Aucune ».
+
+## Actions de scène
+
+Les deux actions sont **refusées tant que « Autoriser le pilotage de l'onduleur » est désactivé**,
+la valeur par défaut : une scène qui change l'usage de la batterie ne doit jamais partir par
+accident. Activez-le dans la configuration pour vous en servir. Elles demandent un onduleur avec
+batterie.
+
+- **Changer le mode de travail de l'onduleur** : Autoconsommation (la batterie couvre d'abord la
+  maison), Injection prioritaire (le solaire part d'abord vers le réseau) ou Secours (la batterie
+  reste pleine pour une coupure). Sortie : le mode appliqué.
+- **Changer la charge minimale de la batterie** : la charge que la batterie garde hors réseau et
+  sur réseau, de 10 à 100 %, celle sur réseau pas en dessous de l'autre. Sorties : les deux valeurs
+  appliquées.
+
+Ces réglages passent par l'Open API officielle (`setting/set` avec la clé `WorkMode`, et
+`battery/soc/set`). Quand un **planning** (plages horaires) est actif dans l'application FoxESS,
+l'onduleur les refuse : l'action échoue avec « un planning est actif dans l'application FoxESS ».
+Les plages de charge et de décharge forcées du planificateur FoxESS ne sont pas proposées.
+
+## Exemples de scènes
+
+- **Alerte de défaut** : déclencheur « Défaut de l'onduleur », action « Envoyer un message » :
+  « FoxESS : {{triggerEvent.data.fault}} ».
+- **Orage annoncé** : quand la météo prévoit un orage, « Changer le mode de travail de
+  l'onduleur » sur Secours ; le lendemain matin, retour en Autoconsommation.
+- **Utiliser le surplus** : quand « Injection réseau » reste au-dessus de 2 000 W pendant
+  15 minutes et que « Niveau de batterie » dépasse 90 %, allumer le chauffe-eau.
+
+## Quota de l'API
+
+Le FoxESS Cloud autorise **1 440 appels à l'Open API par jour** (un par minute en moyenne) et refuse
+les rafales. L'intégration espace ses appels d'une seconde au moins et lit, à chaque cycle :
+
+- les valeurs en temps réel de tous les onduleurs ajoutés, en un seul appel ;
+- toutes les 15 minutes au plus : la liste des onduleurs (en ligne, en alarme, hors ligne) et la
+  production du jour de chaque onduleur ;
+- toutes les heures, pour un onduleur avec batterie : sa charge minimale et son mode de travail.
+
+Appels par jour pour **un** onduleur avec batterie :
+
+| Intervalle de rafraîchissement | Appels par jour |
+| ------------------------------ | --------------- |
+| 5 minutes                      | 528             |
+| 10 minutes                     | 384             |
+| 15 minutes                     | 336             |
+| 30 minutes                     | 192             |
+| 1 heure                        | 120             |
+
+Sans batterie, 48 de moins. Chaque onduleur supplémentaire ajoute 96 appels (sa production), plus
+48 avec une batterie. Le quota est partagé avec tous les autres outils qui utilisent la même clé
+d'API (Home Assistant, un script…) : donnez à chacun sa clé, ou ralentissez le rafraîchissement.
+Quand le cloud refuse un appel pour quota ou rafale, les lectures s'arrêtent 30 minutes et l'écran
+de configuration l'indique.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Le FoxESS Cloud refuse la clé d'API »** : la clé a été supprimée ou régénérée. Générez-en une
+  nouvelle dans API Management et collez-la à nouveau. Les lectures s'arrêtent une heure après un
+  refus, ou jusqu'au changement de configuration.
+- **« Le FoxESS Cloud refuse la signature des requêtes »** : l'horloge du serveur Gladys est
+  décalée de plus d'une minute. Remettez-la à l'heure (NTP).
+- **« Limite d'appels du FoxESS Cloud atteinte »** : un autre outil utilise la même clé, ou le
+  rafraîchissement est trop rapide. Voir [Quota de l'API](#quota-de-lapi).
+- **« Numéro(s) de série absent(s) de ce compte »** : comparez les numéros de la configuration avec
+  FoxESS Cloud, **Device**, **Inverter**, ou laissez le champ vide.
+- **Aucune chaîne PV**, ou trop : les chaînes viennent de ce que l'onduleur rapporte ; réglez
+  « Nombre de chaînes PV », puis « Mettre à jour » l'onduleur dans l'onglet Découverte.
+- **« Pas de valeur récente »** sur une valeur stable : les valeurs qui ne changent pas sont
+  renvoyées toutes les 6 heures, ce qui suffit ; un onduleur hors ligne garde ses dernières valeurs.
+- Plus de détails : mettez `LOG_LEVEL=debug` sur l'intégration et lisez ses journaux. La clé d'API
+  n'y apparaît jamais.
+
+## Limites
+
+- **Cloud seulement** : pas d'accès local (Modbus). Pour une liaison locale, `foxess_modbus` existe
+  pour Home Assistant ; il ne fait pas partie de cette intégration.
+- **Pas de temps réel** : le FoxESS Cloud se met à jour toutes les 5 minutes environ, une lecture
+  peut avoir cet âge.
+- **Développée sans le matériel** : les réponses de l'API viennent de sa documentation et des
+  projets qui l'utilisent. Des champs nommés autrement sur certains modèles peuvent manquer :
+  dites-le-nous.
+- La **charge minimale** et le **mode de travail** sont lus une fois par heure : un changement fait
+  dans l'application FoxESS apparaît dans le widget dans l'heure.
+- Les **plages de charge ou de décharge forcées** et le **planificateur** de l'application FoxESS
+  ne sont pas proposés ; ni la limite d'injection, ni le chauffage de la batterie.
+- L'index de consommation de la maison n'est pas publié (seulement sa puissance) : valorisé par le
+  suivi d'énergie, il compterait le solaire autoconsommé comme acheté au réseau.
+- Non affiliée à FoxESS. FoxESS est une marque de son propriétaire.

@@ -1,93 +1,90 @@
+// -----------------------------------------------------------------------------
+// The scene actions: refused while control is off (the default), applied
+// through the Open API when it is on, a clear refusal when the FoxESS app
+// holds the settings (a schedule is active, errno 44096).
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { DEVICE_BLUEPRINTS } from '../src/devices/index.js';
-import { MOTION_DETECTED_TRIGGER, motionSensor } from '../src/devices/motionSensor.js';
-import { SCENE_ACTIONS } from '../src/scenes.js';
-import { normalizeConfig } from '../src/config.js';
+import { PATHS } from '../src/foxess/client.js';
+import { SN_HYBRID, SN_SOLAR, createWorld, deviceId } from './helpers/world.js';
 
-const manifest = JSON.parse(
-  await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
-);
-const config = normalizeConfig();
-
-const declarationOf = (list, key) => manifest[list].find((entry) => entry.key === key);
-const keysOf = (list) => (list ?? []).map((entry) => entry.key);
-const deviceIdOf = (gladys, key) =>
-  DEVICE_BLUEPRINTS.find((bp) => bp.key === key).deviceExternalId(gladys);
-
-// Let the async interval callback run to completion.
-const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-test('the motion sensor fires one motion_detected event per detection, none on the clear', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'one detection, one event');
-    assert.equal(gladys.fake.sceneEvents[0].key, MOTION_DETECTED_TRIGGER);
-    assert.equal(gladys.fake.states.at(-1).state, 1, 'the state is still published');
-
-    t.mock.timers.tick(10_000);
-    await flush();
-    assert.equal(gladys.fake.states.at(-1).state, 0, 'the detection is cleared');
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'the clear fires no event');
-  } finally {
-    stopPush();
-  }
-});
-
-test('motion_detected data only carries keys the trigger declares', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-  } finally {
-    stopPush();
-  }
-  const [{ data }] = gladys.fake.sceneEvents;
-  const trigger = declarationOf('scene_triggers', MOTION_DETECTED_TRIGGER);
-  // The core keeps the `fields` keys (filters) and the `variables` keys
-  // (exposed to the scene): any other key would be silently dropped.
-  const declared = [...keysOf(trigger.fields), ...keysOf(trigger.variables)];
-  for (const [key, value] of Object.entries(data)) {
-    assert.ok(declared.includes(key), `data.${key} is not declared, the core would drop it`);
-    assert.ok(value === null || typeof value !== 'object', `data.${key} must be a primitive`);
-  }
-  // A `"source": "devices"` filter stores a device external_id.
-  assert.equal(data.device, deviceIdOf(gladys, 'motion-sensor'));
-  const targets = trigger.fields.find((field) => field.key === 'target').options;
-  assert.ok(
-    targets.some((option) => option.value === data.target),
-    `data.target "${data.target}" must be one of the filter options`,
-  );
-});
-
-test('identify_device signals the chosen device and returns the declared outputs', async () => {
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'light') },
-    config,
+test('control off (the default): the actions are refused and nothing is sent', async (t) => {
+  const w = await createWorld();
+  t.after(() => w.app.stop());
+  const ack = await w.gladys.fake.sceneAction('set_work_mode', {
+    device: deviceId(w.gladys, SN_HYBRID),
+    mode: 'Backup',
   });
-  assert.deepEqual(outputs, { signalled: true });
-  const declared = keysOf(declarationOf('scene_actions', 'identify_device').outputs);
-  for (const key of Object.keys(outputs)) {
-    assert.ok(declared.includes(key), `output "${key}" is not declared, the core would drop it`);
-  }
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /control is off/);
+  assert.match(ack.error, /pilotage/);
+  assert.equal(w.cloud.countOf(PATHS.settingSet), 0);
 });
 
-test('identify_device reports a device that cannot signal itself through its output', async () => {
-  // Not a failure: a scene action is never a condition, the scene author
-  // gates the following actions on the output instead.
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'weather-station') },
-    config,
+test('control on: the work mode and the minimum charge are written', async (t) => {
+  const w = await createWorld({ config: { allow_control: true } });
+  t.after(() => w.app.stop());
+  const device = deviceId(w.gladys, SN_HYBRID);
+
+  let ack = await w.gladys.fake.sceneAction('set_work_mode', { device, mode: 'Backup' });
+  assert.deepEqual(ack, { success: true, data: { outputs: { work_mode: 'Backup' } } });
+  assert.equal(w.cloud.workMode.get(SN_HYBRID), 'Backup');
+  const set = w.cloud.requests.find((r) => r.path === PATHS.settingSet);
+  assert.deepEqual(set.body, { sn: SN_HYBRID, key: 'WorkMode', value: 'Backup' });
+
+  ack = await w.gladys.fake.sceneAction('set_min_soc', {
+    device,
+    min_soc: 15,
+    min_soc_on_grid: 30,
   });
-  assert.deepEqual(outputs, { signalled: false });
+  assert.deepEqual(ack, { success: true, data: { outputs: { min_soc: 15, min_soc_on_grid: 30 } } });
+  assert.deepEqual(w.cloud.minSoc.get(SN_HYBRID), { minSoc: 15, minSocOnGrid: 30 });
+});
+
+test('invalid values, an inverter without battery or unknown are refused before any call', async (t) => {
+  const w = await createWorld({ config: { allow_control: true } });
+  t.after(() => w.app.stop());
+  const device = deviceId(w.gladys, SN_HYBRID);
+  const calls = w.cloud.requests.length;
+  const refused = [
+    ['set_min_soc', { device, min_soc: 5, min_soc_on_grid: 20 }],
+    ['set_min_soc', { device, min_soc: 30, min_soc_on_grid: 20 }],
+    ['set_min_soc', { device, min_soc: 10.5, min_soc_on_grid: 20 }],
+    ['set_work_mode', { device, mode: 'ForceDischarge' }],
+    ['set_work_mode', { device: deviceId(w.gladys, SN_SOLAR), mode: 'SelfUse' }],
+    ['set_work_mode', { device: 'ext:test-integration:inverter:UNKNOWN000', mode: 'SelfUse' }],
+  ];
+  for (const [key, fields] of refused) {
+    const ack = await w.gladys.fake.sceneAction(key, fields);
+    assert.equal(ack.success, false, `${key} ${JSON.stringify(fields)}`);
+  }
+  assert.equal(w.cloud.requests.length, calls);
+});
+
+test('a schedule active in the FoxESS app: the refusal says what to do', async (t) => {
+  const w = await createWorld({ config: { allow_control: true } });
+  t.after(() => w.app.stop());
+  w.cloud.scheduleActive = true;
+  const ack = await w.gladys.fake.sceneAction('set_work_mode', {
+    device: deviceId(w.gladys, SN_HYBRID),
+    mode: 'Feedin',
+  });
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /schedule is active/);
+  assert.equal(w.cloud.workMode.get(SN_HYBRID), 'SelfUse');
+});
+
+test('the test action lists the inverters and the calls left today', async (t) => {
+  const w = await createWorld();
+  t.after(() => w.app.stop());
+  const ack = await w.gladys.fake.action('test_connection', {});
+  assert.equal(ack.success, true);
+  const message = ack.data.message ?? ack.data;
+  assert.match(message.en, /H1-5\.0-E \(60BH50000000001\), T10-G3/);
+  assert.match(message.fr, /Appels d'API restants aujourd'hui : 1203 \/ 1440/);
+
+  w.cloud.apiKey = 'another-key';
+  const refused = await w.gladys.fake.action('test_connection', {});
+  assert.match((refused.data.message ?? refused.data).en, /refused the API key/);
 });
