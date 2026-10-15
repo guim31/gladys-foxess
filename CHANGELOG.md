@@ -28,5 +28,7 @@ the notes of the version's GitHub Release.
   buttons in the widget, refused until "Allow inverter control" is turned on.
 - "Test the connection" action: the inverters of the account and the API calls left today.
 - Texts, feature names and documentation in English, French, German and Spanish.
+- A key the FoxESS Cloud gateway refuses with HTTP 401 or 403 shows as a refused API key
+  (invalid or revoked) in the Configuration screen, not as the cloud being unreachable.
 
 [Unreleased]: https://github.com/guim31/gladys-foxess/commits/main

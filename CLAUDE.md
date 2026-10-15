@@ -282,5 +282,11 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
   un onduleur hybride va dans `energy-sensor/power` (commentaire de `constants.js` du cœur).
 - Budget widget : avec les trois boutons de mode, seules quatre tuiles tiennent ; les autres
   passent en lignes `status`.
-- `scripts/probe.mjs` sans clé doit répondre « clé refusée » (41808/41809) : c'est la preuve que la
-  signature est juste. 40256 = signature ou horloge.
+- **Clé inconnue = HTTP 401 à corps vide** (mesuré par l'orchestrateur sur le vrai cloud le
+  15/10/2026, serveur Tengine) : la passerelle devant `/op/` répond 401 sans enveloppe ni errno, pour
+  une clé fausse comme pour une signature fausse ou sans en-tête (`/c/v0/errors/message`, l'ancienne
+  API, répond 200 `{"errno":41201}`). Le client traite donc 401/403 comme une clé refusée
+  (`FoxessAuthError`, `kind: 'auth'`, même pause d'une heure que 41808/41809), jamais comme une panne
+  réseau. Conséquence : sans clé valide, **impossible de vérifier la signature**.
+  `scripts/probe.mjs` sans clé ne prouve que l'accès au cloud et le refus (sortie 0 sur un 401) ;
+  la signature se vérifie avec `FOXESS_API_KEY`.

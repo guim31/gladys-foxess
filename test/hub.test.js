@@ -323,3 +323,20 @@ test('a reconnection to Gladys sends every state again', async (t) => {
   await w.gladys.connect();
   assert.ok(w.gladys.fake.states.length >= before + 30, 'everything published again');
 });
+
+test('a gateway 401 shows the refused key and pauses like an errno refusal', async (t) => {
+  const w = await createWorld({ connect: false });
+  t.after(() => w.app.stop());
+  w.cloud.gatewayStatus = 401;
+  await w.gladys.connect();
+  await w.app.ready;
+  assert.deepEqual(w.gladys.fake.connectionStatus, { connected: false, message: TEXT.keyRefused });
+  w.cloud.gatewayStatus = null;
+  const calls = w.cloud.requests.length;
+  w.clock.advance(30 * MINUTE);
+  await w.hub.refresh();
+  assert.equal(w.cloud.requests.length, calls, 'no retry before the pause ends');
+  w.clock.advance(31 * MINUTE);
+  await w.hub.refresh();
+  assert.deepEqual(w.gladys.fake.connectionStatus, { connected: true });
+});

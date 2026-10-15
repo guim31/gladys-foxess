@@ -48,6 +48,8 @@ export class FakeFoxess {
     this.workMode = new Map([[SN_HYBRID, 'SelfUse']]);
     this.scheduleActive = false;
     this.online = true;
+    /** An HTTP status the gateway answers with an empty body, whatever the request (live: 401 for an unknown key). */
+    this.gatewayStatus = null;
     this.requests = [];
     /** Errors forced on a path: path -> errno (once, or every time with `sticky`). */
     this.forced = new Map();
@@ -94,6 +96,9 @@ export class FakeFoxess {
       throw error;
     }
 
+    if (this.gatewayStatus !== null) {
+      return { status: this.gatewayStatus, text: '' };
+    }
     // The checks of the real cloud, in its order.
     const expected = createHash('md5')
       .update(`${pathname}\\r\\n${headers.token}\\r\\n${headers.timestamp}`)

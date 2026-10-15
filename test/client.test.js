@@ -142,3 +142,16 @@ test('the error envelopes of the Open API document map to their kind', async () 
     await assert.rejects(client(stub).listDevices(), { kind, errno });
   }
 });
+
+test('an HTTP 401 or 403 with an empty body is a refused key, not a network error', async () => {
+  // What the live gateway answers for an unknown key (and a wrong signature).
+  for (const status of [401, 403]) {
+    const stub = { handle: async () => ({ status, text: '' }) };
+    await assert.rejects(client(stub).listDevices(), (err) => {
+      assert.equal(err.kind, 'auth');
+      assert.equal(err.status, status);
+      assert.ok(!err.message.includes(API_KEY));
+      return true;
+    });
+  }
+});

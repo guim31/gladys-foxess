@@ -5,9 +5,12 @@
 // no signature, serial numbers cut to their last 4 characters.
 //
 //   node scripts/probe.mjs
-//     Signs a request with a FAKE key. The expected answer is a refused key
-//     (errno 41808 or 41809): the signature and the timestamp were accepted,
-//     only the key was not. errno 40256 means the signature itself is wrong.
+//     Signs a request with a FAKE key. The expected answer is a refused key:
+//     the live gateway answers HTTP 401 with an empty body (2026-10-15), and
+//     the same 401 for a wrong signature, so this only proves the cloud is
+//     reachable and refuses unknown keys. errno 41808/41809 would mean the
+//     signature passed; errno 40256 that it is wrong. Checking the signature
+//     itself takes a valid key (FOXESS_API_KEY below).
 //
 //   FOXESS_API_KEY=<key> node scripts/probe.mjs
 //     With a real key: lists the inverters, reads their real-time values,
@@ -55,6 +58,8 @@ const USED_VARIABLES = [
 function report(label, err) {
   if (err instanceof FoxessApiError) {
     console.log(`${label}: errno ${err.errno} (${err.kind})`);
+  } else if (err.status) {
+    console.log(`${label}: HTTP ${err.status} (${err.kind})`);
   } else {
     console.log(`${label}: ${err.kind ?? 'error'} — ${err.message}`);
   }
@@ -69,7 +74,12 @@ async function probeFakeKey() {
   } catch (err) {
     report('device/list with a fake key', err);
     if (err.kind === 'auth') {
-      console.log('OK: signature and timestamp accepted, the fake key refused as expected.');
+      console.log('OK: the fake key was refused, as expected.');
+      if (err.status) {
+        console.log(
+          `Note: the gateway answers HTTP ${err.status} with an empty body for a fake key and for a wrong signature alike: the signature can only be checked with a valid key.`,
+        );
+      }
     } else if (err.kind === 'signature') {
       console.log('PROBLEM: the cloud refused the signature or the timestamp (check the clock).');
       process.exitCode = 1;

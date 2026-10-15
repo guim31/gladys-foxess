@@ -162,7 +162,7 @@ de configuration l'indique.
 
 ## Dépannage
 
-- **« Le FoxESS Cloud refuse la clé d'API »** : la clé a été supprimée ou régénérée. Générez-en une
+- **« Le FoxESS Cloud refuse la clé d'API »** : la clé est invalide, ou a été supprimée ou régénérée. Générez-en une
   nouvelle dans API Management et collez-la à nouveau. Les lectures s'arrêtent une heure après un
   refus, ou jusqu'au changement de configuration.
 - **« Le FoxESS Cloud refuse la signature des requêtes »** : l'horloge du serveur Gladys est

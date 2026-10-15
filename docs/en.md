@@ -154,7 +154,7 @@ quota or burst, the readings pause for 30 minutes and the Configuration screen s
 
 ## Troubleshooting
 
-- **"The FoxESS Cloud refused the API key"**: the key was deleted or regenerated. Generate a new one
+- **"The FoxESS Cloud refused the API key"**: the key is invalid, or was deleted or regenerated. Generate a new one
   in API Management and paste it again. The readings pause an hour after a refusal, or until the
   configuration changes.
 - **"The FoxESS Cloud refused the request signature"**: the clock of the Gladys server is off by

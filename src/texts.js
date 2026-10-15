@@ -188,10 +188,10 @@ export const TEXT = {
     es: 'Introduzca la clave de API de FoxESS Cloud.',
   },
   keyRefused: {
-    en: 'The FoxESS Cloud refused the API key: create a new one in your FoxESS Cloud profile.',
-    fr: "Le FoxESS Cloud refuse la clé d'API : créez-en une nouvelle dans votre profil FoxESS Cloud.",
-    de: 'Die FoxESS Cloud lehnt den API-Schlüssel ab: Erstelle einen neuen in deinem FoxESS-Cloud-Profil.',
-    es: 'FoxESS Cloud rechaza la clave de API: cree una nueva en su perfil de FoxESS Cloud.',
+    en: 'The FoxESS Cloud refused the API key (invalid or revoked): create a new one in your FoxESS Cloud profile.',
+    fr: "Le FoxESS Cloud refuse la clé d'API (invalide ou révoquée) : créez-en une nouvelle dans votre profil FoxESS Cloud.",
+    de: 'Die FoxESS Cloud lehnt den API-Schlüssel ab (ungültig oder widerrufen): Erstelle einen neuen in deinem FoxESS-Cloud-Profil.',
+    es: 'FoxESS Cloud rechaza la clave de API (no válida o revocada): cree una nueva en su perfil de FoxESS Cloud.',
   },
   signatureRefused: {
     en: 'The FoxESS Cloud refused the request signature: check the clock of the Gladys server.',

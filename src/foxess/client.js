@@ -87,6 +87,22 @@ export class FoxessHttpError extends Error {
 }
 
 /**
+ * The gateway in front of `/op/` refused the request at the HTTP level:
+ * an unknown or revoked key gets a 401 with an empty body, no errno (seen on
+ * the live cloud, 2026-10-15). A wrong signature gets the same answer, so the
+ * two cannot be told apart without a valid key.
+ */
+export class FoxessAuthError extends Error {
+  constructor(status, path) {
+    super(`FoxESS Cloud refused the API key on ${path} (HTTP ${status})`);
+    this.name = 'FoxessAuthError';
+    this.kind = 'auth';
+    this.status = status;
+    this.path = path;
+  }
+}
+
+/**
  * The Open API signature (see the header of this file).
  * @param {string} path request path, without the query string
  * @param {string} token API key
@@ -175,6 +191,9 @@ export class FoxessClient {
       });
     } catch (err) {
       throw new FoxessHttpError(err.cause?.code ?? err.code ?? err.message, path);
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new FoxessAuthError(response.status, path);
     }
     if (response.status !== 200) {
       throw new FoxessHttpError(`HTTP ${response.status}`, path);

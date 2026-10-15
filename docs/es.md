@@ -159,7 +159,7 @@ configuración lo indica.
 
 ## Solución de problemas
 
-- **«FoxESS Cloud rechaza la clave de API»**: la clave se ha borrado o regenerado. Genere una nueva
+- **«FoxESS Cloud rechaza la clave de API»**: la clave no es válida, o se ha borrado o regenerado. Genere una nueva
   en API Management y péguela de nuevo. Tras un rechazo, las lecturas se detienen una hora, o hasta
   que cambie la configuración.
 - **«FoxESS Cloud rechaza la firma de las solicitudes»**: el reloj del servidor Gladys tiene un

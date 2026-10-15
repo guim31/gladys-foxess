@@ -163,7 +163,7 @@ pausieren die Messungen 30 Minuten, und der Konfigurationsbildschirm zeigt es an
 
 ## Fehlerbehebung
 
-- **„Die FoxESS Cloud lehnt den API-Schlüssel ab“**: Der Schlüssel wurde gelöscht oder neu
+- **„Die FoxESS Cloud lehnt den API-Schlüssel ab“**: Der Schlüssel ist ungültig, oder er wurde gelöscht oder neu
   erzeugt. Erzeuge einen neuen unter API Management und füge ihn wieder ein. Nach einer Ablehnung
   pausieren die Messungen eine Stunde, oder bis sich die Konfiguration ändert.
 - **„Die FoxESS Cloud lehnt die Signatur der Anfragen ab“**: Die Uhr des Gladys-Servers weicht um
