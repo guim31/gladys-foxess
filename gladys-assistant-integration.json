@@ -1,177 +1,504 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "FoxESS",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "FoxESS inverters and batteries through the FoxESS Cloud: solar, house, grid and battery.",
+    "fr": "Onduleurs et batteries FoxESS via le FoxESS Cloud : solaire, maison, réseau et batterie.",
+    "de": "FoxESS-Wechselrichter und -Batterien über die FoxESS Cloud: Solar, Haus, Netz, Batterie.",
+    "es": "Inversores y baterías FoxESS vía FoxESS Cloud: solar, casa, red y batería."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-foxess:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-foxess/main/cover.png",
+  "categories": ["energy"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your FoxESS Cloud account",
+        "fr": "Votre compte FoxESS Cloud",
+        "de": "Dein FoxESS-Cloud-Konto",
+        "es": "Su cuenta de FoxESS Cloud"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "On foxesscloud.com, open your profile (top right), User Profile, API Management, then Generate API key. The FoxESS Cloud allows 1,440 API calls a day per inverter: keep the refresh at 5 minutes or more.",
+        "fr": "Sur foxesscloud.com, ouvrez votre profil (en haut à droite), User Profile, API Management, puis Generate API key. Le FoxESS Cloud autorise 1 440 appels d'API par jour et par onduleur : gardez un rafraîchissement de 5 minutes ou plus.",
+        "de": "Öffne auf foxesscloud.com dein Profil (oben rechts), User Profile, API Management, dann Generate API key. Die FoxESS Cloud erlaubt 1.440 API-Aufrufe pro Tag und Wechselrichter: Lass die Aktualisierung bei 5 Minuten oder mehr.",
+        "es": "En foxesscloud.com, abra su perfil (arriba a la derecha), User Profile, API Management y luego Generate API key. FoxESS Cloud permite 1.440 llamadas de API al día por inversor: mantenga una actualización de 5 minutos o más."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://www.foxesscloud.com",
+          "label": {
+            "en": "FoxESS Cloud",
+            "fr": "FoxESS Cloud",
+            "de": "FoxESS Cloud",
+            "es": "FoxESS Cloud"
+          }
+        },
+        {
+          "url": "https://www.foxesscloud.com/public/i18n/en/OpenApiDocument.html",
+          "label": {
+            "en": "Open API document",
+            "fr": "Documentation de l'Open API",
+            "de": "Dokumentation der Open API",
+            "es": "Documentación de la Open API"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "api_key",
+      "type": "secret",
+      "label": {
+        "en": "API key",
+        "fr": "Clé d'API",
+        "de": "API-Schlüssel",
+        "es": "Clave de API"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The key generated in API Management of your FoxESS Cloud profile.",
+        "fr": "La clé générée dans API Management de votre profil FoxESS Cloud.",
+        "de": "Der Schlüssel, der unter API Management in deinem FoxESS-Cloud-Profil erzeugt wurde.",
+        "es": "La clave generada en API Management de su perfil de FoxESS Cloud."
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "serial_numbers",
+      "type": "string",
+      "label": {
+        "en": "Inverter serial numbers",
+        "fr": "Numéros de série des onduleurs",
+        "de": "Seriennummern der Wechselrichter",
+        "es": "Números de serie de los inversores"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "description": {
+        "en": "Empty: every inverter of the account. Otherwise the serial numbers to show, separated by commas (Device, Inverter in FoxESS Cloud).",
+        "fr": "Vide : tous les onduleurs du compte. Sinon, les numéros de série à afficher, séparés par des virgules (Device, Inverter dans FoxESS Cloud).",
+        "de": "Leer: alle Wechselrichter des Kontos. Sonst die anzuzeigenden Seriennummern, durch Kommas getrennt (Device, Inverter in der FoxESS Cloud).",
+        "es": "Vacío: todos los inversores de la cuenta. Si no, los números de serie que mostrar, separados por comas (Device, Inverter en FoxESS Cloud)."
+      },
+      "placeholder": {
+        "en": "e.g. 60BH50000000001",
+        "fr": "ex. 60BH50000000001",
+        "de": "z. B. 60BH50000000001",
+        "es": "p. ej. 60BH50000000001"
+      },
       "required": false,
-      "default": "celsius",
+      "default": ""
+    },
+    {
+      "key": "refresh_minutes",
+      "type": "select",
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "The FoxESS Cloud itself updates its values about every 5 minutes.",
+        "fr": "Le FoxESS Cloud lui-même met ses valeurs à jour environ toutes les 5 minutes.",
+        "de": "Die FoxESS Cloud selbst aktualisiert ihre Werte etwa alle 5 Minuten.",
+        "es": "FoxESS Cloud actualiza sus valores aproximadamente cada 5 minutos."
+      },
+      "required": false,
+      "default": "5",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "5",
+          "label": { "en": "5 minutes", "fr": "5 minutes", "de": "5 Minuten", "es": "5 minutos" }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 minutes",
+            "fr": "10 minutes",
+            "de": "10 Minuten",
+            "es": "10 minutos"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "15 minutes",
+            "fr": "15 minutes",
+            "de": "15 Minuten",
+            "es": "15 minutos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 minutes",
+            "fr": "30 minutes",
+            "de": "30 Minuten",
+            "es": "30 minutos"
+          }
+        },
+        {
+          "value": "60",
+          "label": { "en": "1 hour", "fr": "1 heure", "de": "1 Stunde", "es": "1 hora" }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
+      "key": "pv_strings",
       "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": {
+        "en": "Number of PV strings",
+        "fr": "Nombre de chaînes PV",
+        "de": "Anzahl der PV-Strings",
+        "es": "Número de cadenas FV"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "0: every string the inverter reports. Otherwise only strings 1 to this number get a feature.",
+        "fr": "0 : toutes les chaînes que l'onduleur rapporte. Sinon, seules les chaînes 1 à ce nombre ont une fonctionnalité.",
+        "de": "0: alle Strings, die der Wechselrichter meldet. Sonst bekommen nur die Strings 1 bis zu dieser Zahl eine Funktion.",
+        "es": "0: todas las cadenas que informa el inversor. Si no, solo las cadenas 1 a este número tienen una función."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": 0,
+      "min": 0,
+      "max": 18
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the feature names",
+        "fr": "Langue des noms de fonctionnalités",
+        "de": "Sprache der Funktionsnamen",
+        "es": "Idioma de los nombres de funciones"
+      },
+      "description": {
+        "en": "Used when an inverter is added to Gladys, and for the status texts.",
+        "fr": "Utilisée quand un onduleur est ajouté à Gladys, et pour les textes d'état.",
+        "de": "Wird verwendet, wenn ein Wechselrichter zu Gladys hinzugefügt wird, und für die Statustexte.",
+        "es": "Se usa cuando se añade un inversor a Gladys y para los textos de estado."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "Anglais", "de": "Englisch", "es": "Inglés" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "French", "fr": "Français", "de": "Französisch", "es": "Francés" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "German", "fr": "Allemand", "de": "Deutsch", "es": "Alemán" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Spanish", "fr": "Espagnol", "de": "Spanisch", "es": "Español" }
+        }
+      ]
+    },
+    {
+      "key": "control",
+      "type": "section",
+      "label": {
+        "en": "Inverter control",
+        "fr": "Pilotage de l'onduleur",
+        "de": "Steuerung des Wechselrichters",
+        "es": "Control del inversor"
+      },
+      "description": {
+        "en": "Off by default. When on, scenes and the dashboard widget can change the work mode and the minimum battery charge. A wrong setting can leave the battery empty during a power cut.",
+        "fr": "Désactivé par défaut. Activé, les scènes et le widget du tableau de bord peuvent changer le mode de travail et la charge minimale de la batterie. Un mauvais réglage peut laisser la batterie vide pendant une coupure.",
+        "de": "Standardmäßig aus. Eingeschaltet können Szenen und das Dashboard-Widget den Arbeitsmodus und die Mindestladung der Batterie ändern. Eine falsche Einstellung kann die Batterie bei einem Stromausfall leer lassen.",
+        "es": "Desactivado por defecto. Activado, las escenas y el widget del panel pueden cambiar el modo de trabajo y la carga mínima de la batería. Un ajuste incorrecto puede dejar la batería vacía durante un corte."
+      }
+    },
+    {
+      "key": "allow_control",
+      "type": "boolean",
+      "label": {
+        "en": "Allow inverter control",
+        "fr": "Autoriser le pilotage de l'onduleur",
+        "de": "Steuerung des Wechselrichters erlauben",
+        "es": "Permitir el control del inversor"
+      },
+      "required": false,
+      "default": false
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "description": {
+        "en": "Lists the inverters of the account and the API calls left today.",
+        "fr": "Liste les onduleurs du compte et les appels d'API restants aujourd'hui.",
+        "de": "Listet die Wechselrichter des Kontos und die heute verbleibenden API-Aufrufe auf.",
+        "es": "Muestra los inversores de la cuenta y las llamadas de API restantes hoy."
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "inverter_fault",
+      "label": {
+        "en": "Inverter fault",
+        "fr": "Défaut de l'onduleur",
+        "de": "Störung des Wechselrichters",
+        "es": "Fallo del inversor"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The inverter reports a new fault, with its description from FoxESS.",
+        "fr": "L'onduleur signale un nouveau défaut, avec sa description par FoxESS.",
+        "de": "Der Wechselrichter meldet eine neue Störung, mit ihrer Beschreibung von FoxESS.",
+        "es": "El inversor informa de un nuevo fallo, con su descripción de FoxESS."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "label": {
+            "en": "Inverter",
+            "fr": "Onduleur",
+            "de": "Wechselrichter",
+            "es": "Inversor"
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "fault",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Fault",
+            "fr": "Défaut",
+            "de": "Störung",
+            "es": "Fallo"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "set_work_mode",
+      "label": {
+        "en": "Set the inverter work mode",
+        "fr": "Changer le mode de travail de l'onduleur",
+        "de": "Arbeitsmodus des Wechselrichters setzen",
+        "es": "Cambiar el modo de trabajo del inversor"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Self-use, feed-in first or backup. Needs inverter control allowed in the configuration.",
+        "fr": "Autoconsommation, injection prioritaire ou secours. Le pilotage doit être autorisé dans la configuration.",
+        "de": "Eigenverbrauch, Einspeisung zuerst oder Notstrom. Die Steuerung muss in der Konfiguration erlaubt sein.",
+        "es": "Autoconsumo, exportación prioritaria o respaldo. El control debe estar permitido en la configuración."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Inverter",
+            "fr": "Onduleur",
+            "de": "Wechselrichter",
+            "es": "Inversor"
+          },
           "required": true
+        },
+        {
+          "key": "mode",
+          "type": "select",
+          "label": {
+            "en": "Work mode",
+            "fr": "Mode de travail",
+            "de": "Arbeitsmodus",
+            "es": "Modo de trabajo"
+          },
+          "required": true,
+          "default": "SelfUse",
+          "options": [
+            {
+              "value": "SelfUse",
+              "label": {
+                "en": "Self-use",
+                "fr": "Autoconsommation",
+                "de": "Eigenverbrauch",
+                "es": "Autoconsumo"
+              }
+            },
+            {
+              "value": "Feedin",
+              "label": {
+                "en": "Feed-in first",
+                "fr": "Injection prioritaire",
+                "de": "Einspeisung zuerst",
+                "es": "Exportación prioritaria"
+              }
+            },
+            {
+              "value": "Backup",
+              "label": {
+                "en": "Backup",
+                "fr": "Secours",
+                "de": "Notstrom",
+                "es": "Respaldo"
+              }
+            }
+          ]
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "work_mode",
+          "type": "string",
+          "label": {
+            "en": "Work mode set",
+            "fr": "Mode de travail appliqué",
+            "de": "Gesetzter Arbeitsmodus",
+            "es": "Modo de trabajo aplicado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "set_min_soc",
+      "label": {
+        "en": "Set the minimum battery charge",
+        "fr": "Changer la charge minimale de la batterie",
+        "de": "Mindestladung der Batterie setzen",
+        "es": "Cambiar la carga mínima de la batería"
+      },
+      "description": {
+        "en": "The charge the battery keeps, off grid and on grid. Needs inverter control allowed in the configuration.",
+        "fr": "La charge que la batterie garde, hors réseau et sur réseau. Le pilotage doit être autorisé dans la configuration.",
+        "de": "Die Ladung, die die Batterie behält, ohne Netz und am Netz. Die Steuerung muss in der Konfiguration erlaubt sein.",
+        "es": "La carga que conserva la batería, sin red y con red. El control debe estar permitido en la configuración."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Inverter",
+            "fr": "Onduleur",
+            "de": "Wechselrichter",
+            "es": "Inversor"
+          },
+          "required": true
+        },
+        {
+          "key": "min_soc",
+          "type": "number",
+          "label": {
+            "en": "Minimum charge off grid (%)",
+            "fr": "Charge minimale hors réseau (%)",
+            "de": "Mindestladung ohne Netz (%)",
+            "es": "Carga mínima sin red (%)"
+          },
+          "required": true,
+          "default": 10,
+          "min": 10,
+          "max": 100
+        },
+        {
+          "key": "min_soc_on_grid",
+          "type": "number",
+          "label": {
+            "en": "Minimum charge on grid (%)",
+            "fr": "Charge minimale sur réseau (%)",
+            "de": "Mindestladung am Netz (%)",
+            "es": "Carga mínima con red (%)"
+          },
+          "description": {
+            "en": "Not below the off-grid one.",
+            "fr": "Pas en dessous de celle hors réseau.",
+            "de": "Nicht unter der ohne Netz.",
+            "es": "No inferior a la de sin red."
+          },
+          "required": true,
+          "default": 10,
+          "min": 10,
+          "max": 100
+        }
+      ],
+      "outputs": [
+        {
+          "key": "min_soc",
+          "type": "number",
+          "label": {
+            "en": "Minimum charge off grid",
+            "fr": "Charge minimale hors réseau",
+            "de": "Mindestladung ohne Netz",
+            "es": "Carga mínima sin red"
+          }
+        },
+        {
+          "key": "min_soc_on_grid",
+          "type": "number",
+          "label": {
+            "en": "Minimum charge on grid",
+            "fr": "Charge minimale sur réseau",
+            "de": "Mindestladung am Netz",
+            "es": "Carga mínima con red"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "overview",
+      "label": {
+        "en": "FoxESS solar",
+        "fr": "Solaire FoxESS",
+        "de": "FoxESS Solar",
+        "es": "Solar FoxESS"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Solar, house, grid and battery of an inverter, and its work mode.",
+        "fr": "Solaire, maison, réseau et batterie d'un onduleur, et son mode de travail.",
+        "de": "Solar, Haus, Netz und Batterie eines Wechselrichters, und sein Arbeitsmodus.",
+        "es": "Solar, casa, red y batería de un inversor, y su modo de trabajo."
+      },
+      "icon": "sun",
+      "settings": [
+        {
+          "key": "inverter",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Inverter",
+            "fr": "Onduleur",
+            "de": "Wechselrichter",
+            "es": "Inversor"
+          },
+          "description": {
+            "en": "Empty: the first inverter added to Gladys.",
+            "fr": "Vide : le premier onduleur ajouté à Gladys.",
+            "de": "Leer: der erste zu Gladys hinzugefügte Wechselrichter.",
+            "es": "Vacío: el primer inversor añadido a Gladys."
+          }
+        }
+      ],
+      "action_timeout_seconds": 30
     }
   ]
 }

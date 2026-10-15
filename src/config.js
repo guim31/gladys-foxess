@@ -1,45 +1,68 @@
 // -----------------------------------------------------------------------------
-// Integration configuration.
-//
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// Integration configuration: defaults (they mirror the `default` values of the
+// manifest `config_schema`, see test/manifest.test.js) and normalization, so
+// the rest of the code never deals with strings, blanks or `undefined`.
 // -----------------------------------------------------------------------------
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
+export const LANGUAGES = ['en', 'fr', 'de', 'es'];
+
+// Refresh intervals offered in the configuration, in minutes. The FoxESS
+// Cloud refreshes its own data about every 5 minutes and allows 1,440 Open
+// API calls a day: reading faster gives the same numbers and burns the quota.
+export const REFRESH_MINUTES = ['5', '10', '15', '30', '60'];
+
+/** Highest PV string number the Open API reports (pv1Power ... pv18Power). */
+export const MAX_PV_STRINGS = 18;
+
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+  api_key: '',
+  serial_numbers: '',
+  refresh_minutes: '5',
+  pv_strings: 0,
+  allow_control: false,
+  language: 'fr',
 };
 
 /**
- * Merge the user config with the defaults.
- * @param {Record<string, unknown>} raw config returned by the SDK
+ * Split the serial numbers typed by the user: commas, semicolons, spaces or
+ * line breaks, upper-cased (the portal shows them upper-case), duplicates
+ * dropped.
+ * @param {unknown} raw
+ * @returns {string[]}
+ */
+export function parseSerialNumbers(raw) {
+  if (typeof raw !== 'string') {
+    return [];
+  }
+  const serials = raw
+    .split(/[\s,;]+/)
+    .map((serial) => serial.trim().toUpperCase())
+    .filter((serial) => /^[A-Z0-9]{6,32}$/.test(serial));
+  return [...new Set(serials)];
+}
+
+/**
+ * @param {Record<string, unknown>} raw the configuration returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const refresh = REFRESH_MINUTES.includes(String(source.refresh_minutes))
+    ? String(source.refresh_minutes)
+    : DEFAULT_CONFIG.refresh_minutes;
+  const strings = Number.parseInt(source.pv_strings, 10);
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    // The key is kept as typed, only the surrounding blanks of a paste dropped.
+    apiKey: typeof source.api_key === 'string' ? source.api_key.trim() : '',
+    serialNumbers: parseSerialNumbers(source.serial_numbers),
+    refreshMs: Number(refresh) * 60_000,
+    pvStrings:
+      Number.isInteger(strings) && strings >= 0 && strings <= MAX_PV_STRINGS
+        ? strings
+        : DEFAULT_CONFIG.pv_strings,
+    allowControl: source.allow_control === true || source.allow_control === 'true',
+    language: LANGUAGES.includes(source.language) ? source.language : DEFAULT_CONFIG.language,
   };
 }
+
+/** True once an API key is filled in. */
+export const isConfigured = (config) => config.apiKey !== '';

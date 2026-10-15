@@ -31,16 +31,22 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only (registerHandlers, shutdown, connect)
+src/app.js                        every SDK handler, registered before connect(), waiting for the hub
+src/hub.js                        FoxessHub: own reading timer, quota, publication, commands, fault trigger
+src/devices.js                    the inverter device (features) and its states, pure functions
+src/foxess/client.js              Open API client: signature, envelope, errno kinds, 1 s spacing
+src/foxess/http.js                the only network access (fetch), a seam for the tests
+src/foxess/model.js               API answers -> readings (kW -> W, strings, battery, states)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget `overview` (manifest `widgets`)
+src/texts.js                      every user-facing text, en/fr/de/es
+src/issues.js                     repeated failures logged once
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+scripts/probe.mjs                 read-only probe of the real cloud (fake key by default)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, against the SDK's fake Gladys and test/helpers/fakeFoxess.js
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +76,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, manifest texts, feature names (`src/texts.js`), and `docs/en.md`,
+  `docs/fr.md`, `docs/de.md`, `docs/es.md` with the same sections.
+  `test/i18n.test.js` checks it.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +241,52 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Intégration FoxESS (propre à ce dépôt)
+
+**API.** Open API du FoxESS Cloud, `https://www.foxesscloud.com/op/…`, clé d'API du profil
+(User Profile → API Management). En-têtes `token`, `timestamp` (ms), `signature`, `lang`. Enveloppe
+`{ errno, msg, result }`, errno 0 = succès, HTTP 200 même en erreur. Endpoints utilisés :
+`POST /op/v0/device/list` (paginé, `status` 1 en ligne / 2 alarme / 3 hors ligne),
+`POST /op/v1/device/real/query` (`{ sns: [...] }`, plusieurs onduleurs en un appel),
+`GET /op/v0/device/generation?sn=` (`today`, `cumulative`), `GET /op/v0/device/battery/soc/get`,
+`POST /op/v0/device/battery/soc/set`, `POST /op/v0/device/setting/get|set` (clé `WorkMode`),
+`GET /op/v0/user/getAccessCount`.
+
+**Pièges découverts (sans matériel, d'après foxess-ha, TonyM1958/FoxESS-Cloud, nicois/foxess-control)**
+
+- **Signature** : MD5 de `path + "\r\n" + clé + "\r\n" + timestamp` où `\r\n` est fait des
+  **quatre caractères littéraux** (un vrai CRLF donne errno 40256). `path` sans la query. Le
+  `timestamp` doit être à moins d'une minute de l'heure du cloud. `sign()` est figé par un test avec
+  la valeur calculée par le `fr"..."` Python des autres clients.
+- **Quota : 1 440 appels par jour**, rafales refusées (40400/40401/40402) : un appel par seconde au
+  plus, et 528 appels/jour pour un onduleur avec batterie à 5 minutes (test). Le cloud lui-même ne
+  se rafraîchit qu'environ toutes les 5 minutes : aucun intervalle plus court n'est proposé.
+- `real/query` v0 est **dépréciée** : utiliser la v1 (`sns`). `result` est une liste par onduleur,
+  chaque entrée avec `datas[]` (`variable`, `value`, `unit`, `name`) et `time`
+  (`2026-10-14 13:05:21 CEST+0200`, offset parfois faux : garder l'heure écrite, ne pas la
+  convertir). Les puissances sont en **kW** : Gladys les reçoit en W.
+- Noms de variables à la FoxESS : `invTemperation`, `ambientTemperation`, `chargeEnergyToTal`,
+  `dischargeEnergyToTal`, `SoC` ou `SoC_1` (par pack), `batTemperature_1`. `runningState` est une
+  chaîne ("163" = raccordé). `ResidualEnergy` a une échelle erratique selon les modèles : non publié.
+- Un onduleur **hors ligne** (status 3) continue de renvoyer ses dernières valeurs : ne publier
+  que l'état. `generation.today` est absent avant le premier kWh du jour : 0.
+- **44096** sur `setting/set` ou `battery/soc/set` : un planning (scheduler) est actif dans l'app
+  FoxESS et verrouille les réglages. Le message le dit.
+- Le cœur 5.2.1 ne dérive les fonctionnalités 30 minutes que des **index de consommation**
+  (`addEnergyFeatures`) : `energy-production-sensor/index` est stocké avec son historique mais la
+  production par 30 minutes n'est pas calculée pour une intégration externe. L'index de
+  consommation de la maison n'est pas publié : rattaché au compteur principal, il ferait payer le
+  solaire autoconsommé.
+- `home-output-sensor` est la sortie propre de l'onduleur : la consommation de la maison mesurée par
+  un onduleur hybride va dans `energy-sensor/power` (commentaire de `constants.js` du cœur).
+- Budget widget : avec les trois boutons de mode, seules quatre tuiles tiennent ; les autres
+  passent en lignes `status`.
+- **Clé inconnue = HTTP 401 à corps vide** (mesuré par l'orchestrateur sur le vrai cloud le
+  15/10/2026, serveur Tengine) : la passerelle devant `/op/` répond 401 sans enveloppe ni errno, pour
+  une clé fausse comme pour une signature fausse ou sans en-tête (`/c/v0/errors/message`, l'ancienne
+  API, répond 200 `{"errno":41201}`). Le client traite donc 401/403 comme une clé refusée
+  (`FoxessAuthError`, `kind: 'auth'`, même pause d'une heure que 41808/41809), jamais comme une panne
+  réseau. Conséquence : sans clé valide, **impossible de vérifier la signature**.
+  `scripts/probe.mjs` sans clé ne prouve que l'accès au cloud et le refus (sortie 0 sur un 401) ;
+  la signature se vérifie avec `FOXESS_API_KEY`.

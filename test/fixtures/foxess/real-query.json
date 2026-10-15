@@ -1,0 +1,109 @@
+{
+  "errno": 0,
+  "msg": "success",
+  "result": [
+    {
+      "deviceSN": "60BH50000000001",
+      "time": "2026-10-14 13:05:21 CEST+0200",
+      "datas": [
+        { "unit": "kW", "name": "PVPower", "variable": "pvPower", "value": 3.412 },
+        { "unit": "V", "name": "PV1Volt", "variable": "pv1Volt", "value": 312.4 },
+        { "unit": "A", "name": "PV1Current", "variable": "pv1Current", "value": 6.1 },
+        { "unit": "kW", "name": "PV1Power", "variable": "pv1Power", "value": 1.905 },
+        { "unit": "V", "name": "PV2Volt", "variable": "pv2Volt", "value": 298.7 },
+        { "unit": "A", "name": "PV2Current", "variable": "pv2Current", "value": 5.0 },
+        { "unit": "kW", "name": "PV2Power", "variable": "pv2Power", "value": 1.507 },
+        { "unit": "V", "name": "PV3Volt", "variable": "pv3Volt", "value": 0.0 },
+        { "unit": "kW", "name": "PV3Power", "variable": "pv3Power", "value": 0.0 },
+        { "unit": "V", "name": "PV4Volt", "variable": "pv4Volt", "value": 0.0 },
+        { "unit": "kW", "name": "PV4Power", "variable": "pv4Power", "value": 0.0 },
+        { "unit": "kW", "name": "Output Power", "variable": "generationPower", "value": 2.981 },
+        { "unit": "kW", "name": "Feed-in Power", "variable": "feedinPower", "value": 0.512 },
+        {
+          "unit": "kW",
+          "name": "GridConsumption Power",
+          "variable": "gridConsumptionPower",
+          "value": 0.0
+        },
+        { "unit": "kW", "name": "Load Power", "variable": "loadsPower", "value": 1.734 },
+        { "unit": "kW", "name": "Charge Power", "variable": "batChargePower", "value": 0.735 },
+        { "unit": "kW", "name": "Discharge Power", "variable": "batDischargePower", "value": 0.0 },
+        { "unit": "%", "name": "SoC", "variable": "SoC", "value": 64.0 },
+        { "unit": "V", "name": "BatVolt", "variable": "batVolt", "value": 52.3 },
+        { "unit": "℃", "name": "BatTemperature", "variable": "batTemperature", "value": 21.5 },
+        { "unit": "℃", "name": "InvTemperation", "variable": "invTemperation", "value": 38.2 },
+        {
+          "unit": "℃",
+          "name": "AmbientTemperature",
+          "variable": "ambientTemperation",
+          "value": 31.0
+        },
+        { "unit": "kWh", "name": "Total Yield", "variable": "generation", "value": 8123.4 },
+        { "unit": "kWh", "name": "Today Yield", "variable": "todayYield", "value": 12.6 },
+        { "unit": "kWh", "name": "Feed-in", "variable": "feedin", "value": 3456.71 },
+        {
+          "unit": "kWh",
+          "name": "Grid Consumption",
+          "variable": "gridConsumption",
+          "value": 2789.1
+        },
+        {
+          "unit": "kWh",
+          "name": "Battery Charge",
+          "variable": "chargeEnergyToTal",
+          "value": 1678.2
+        },
+        {
+          "unit": "kWh",
+          "name": "Battery Discharge",
+          "variable": "dischargeEnergyToTal",
+          "value": 1540.9
+        },
+        { "unit": "kWh", "name": "Load", "variable": "loads", "value": 7012.5 },
+        { "unit": "", "name": "Running State", "variable": "runningState", "value": "163" },
+        { "unit": "", "name": "Current Fault", "variable": "currentFault", "value": "" },
+        {
+          "unit": "",
+          "name": "Current Fault Count",
+          "variable": "currentFaultCount",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "deviceSN": "60T1000000000002",
+      "time": "2026-10-14 13:04:58 CEST+0200",
+      "datas": [
+        { "unit": "kW", "name": "PVPower", "variable": "pvPower", "value": 6.204 },
+        { "unit": "kW", "name": "PV1Power", "variable": "pv1Power", "value": 3.15 },
+        { "unit": "kW", "name": "PV2Power", "variable": "pv2Power", "value": 3.054 },
+        { "unit": "kW", "name": "Output Power", "variable": "generationPower", "value": 6.01 },
+        { "unit": "kW", "name": "Feed-in Power", "variable": "feedinPower", "value": 4.8 },
+        {
+          "unit": "kW",
+          "name": "GridConsumption Power",
+          "variable": "gridConsumptionPower",
+          "value": 0.0
+        },
+        { "unit": "kW", "name": "Load Power", "variable": "loadsPower", "value": 1.21 },
+        { "unit": "℃", "name": "InvTemperation", "variable": "invTemperation", "value": 44.0 },
+        { "unit": "kWh", "name": "Total Yield", "variable": "generation", "value": 20450.2 },
+        { "unit": "kWh", "name": "Feed-in", "variable": "feedin", "value": 15010.0 },
+        {
+          "unit": "kWh",
+          "name": "Grid Consumption",
+          "variable": "gridConsumption",
+          "value": 902.4
+        },
+        { "unit": "", "name": "Running State", "variable": "runningState", "value": "163" },
+        { "unit": "", "name": "Current Fault", "variable": "currentFault", "value": "" },
+        {
+          "unit": "",
+          "name": "Current Fault Count",
+          "variable": "currentFaultCount",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

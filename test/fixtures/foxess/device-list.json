@@ -1,0 +1,33 @@
+{
+  "errno": 0,
+  "msg": "success",
+  "result": {
+    "currentPage": 1,
+    "pageSize": 100,
+    "total": 2,
+    "data": [
+      {
+        "deviceSN": "60BH50000000001",
+        "moduleSN": "609W0000000001",
+        "stationID": "00000000-0000-4000-8000-000000000001",
+        "stationName": "Home",
+        "deviceType": "H1-5.0-E",
+        "productType": "H",
+        "hasBattery": true,
+        "hasPV": true,
+        "status": 1
+      },
+      {
+        "deviceSN": "60T1000000000002",
+        "moduleSN": "609W0000000002",
+        "stationID": "00000000-0000-4000-8000-000000000002",
+        "stationName": "Barn",
+        "deviceType": "T10-G3",
+        "productType": "T",
+        "hasBattery": false,
+        "hasPV": true,
+        "status": 1
+      }
+    ]
+  }
+}

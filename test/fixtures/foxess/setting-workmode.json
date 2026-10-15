@@ -1,0 +1,5 @@
+{
+  "errno": 0,
+  "msg": "success",
+  "result": { "value": "SelfUse", "unit": "", "precision": 1, "range": null }
+}
