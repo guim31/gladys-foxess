@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FoxessClient, PATHS, sign } from '../src/foxess/client.js';
-import { API_KEY, FakeFoxess, SN_HYBRID } from './helpers/fakeFoxess.js';
+import { API_KEY, FakeFoxess, SN_HYBRID, fixture } from './helpers/fakeFoxess.js';
 
 const client = (cloud, options = {}) =>
   new FoxessClient({ apiKey: API_KEY, request: cloud.handle, minIntervalMs: 0, ...options });
@@ -129,4 +129,16 @@ test('the real-time values are asked for several inverters in one call', async (
   const entries = await client(cloud).realTime(['60BH50000000001', '60T1000000000002']);
   assert.equal(entries.length, 2);
   assert.deepEqual(cloud.requests[0].body, { sns: ['60BH50000000001', '60T1000000000002'] });
+});
+
+test('the error envelopes of the Open API document map to their kind', async () => {
+  const cases = [
+    ['error-token-invalid', 'auth', 41808],
+    ['error-too-frequent', 'rate', 40400],
+    ['error-schedule-active', 'locked', 44096],
+  ];
+  for (const [name, kind, errno] of cases) {
+    const stub = { handle: async () => ({ status: 200, text: JSON.stringify(fixture(name)) }) };
+    await assert.rejects(client(stub).listDevices(), { kind, errno });
+  }
 });
