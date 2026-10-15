@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
 ### Added
 
 - FoxESS inverters and batteries through the official FoxESS Cloud Open API, with an API key:
@@ -31,4 +33,5 @@ the notes of the version's GitHub Release.
 - A key the FoxESS Cloud gateway refuses with HTTP 401 or 403 shows as a refused API key
   (invalid or revoked) in the Configuration screen, not as the cloud being unreachable.
 
-[Unreleased]: https://github.com/guim31/gladys-foxess/commits/main
+[Unreleased]: https://github.com/guim31/gladys-foxess/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-foxess/releases/tag/v1.0.1
