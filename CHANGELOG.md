@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-17
+
 ### Changed
 
 - Integration SDK 0.16.1.
@@ -37,5 +39,6 @@ the notes of the version's GitHub Release.
 - A key the FoxESS Cloud gateway refuses with HTTP 401 or 403 shows as a refused API key
   (invalid or revoked) in the Configuration screen, not as the cloud being unreachable.
 
-[Unreleased]: https://github.com/guim31/gladys-foxess/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/guim31/gladys-foxess/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/guim31/gladys-foxess/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/guim31/gladys-foxess/releases/tag/v1.0.1
